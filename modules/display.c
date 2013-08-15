@@ -1940,8 +1940,7 @@ static void setup_dim_timeout(void)
 	cancel_lpm_timeout();
 	cancel_dim_timeout();
 
-	if ((dimming_inhibited == TRUE) ||
-	    (system_state == MCE_STATE_ACTDEAD))
+	if (dimming_inhibited == TRUE)
 		return;
 
 	if (adaptive_dimming_enabled == TRUE) {
@@ -3865,7 +3864,7 @@ static gpointer display_state_filter(gpointer data)
 	}
 
 	/* Ignore display on requests during transition to shutdown
-         * and reboot, when in acting dead and when system state is unknown
+         * and reboot, and when system state is unknown
 	 */
 	if (((cached_display_state == MCE_DISPLAY_UNDEF) ||
 	     (cached_display_state == MCE_DISPLAY_OFF) ||
@@ -3874,14 +3873,11 @@ static gpointer display_state_filter(gpointer data)
 	     (display_state != MCE_DISPLAY_OFF)) &&
 	    ((system_state == MCE_STATE_UNDEF) ||
 	     ((submode & MCE_TRANSITION_SUBMODE) &&
-	      (((system_state == MCE_STATE_SHUTDOWN) ||
-	       (system_state == MCE_STATE_REBOOT)) ||
-	      ((system_state == MCE_STATE_ACTDEAD) &&
-	      ((alarm_ui_state != MCE_ALARM_UI_VISIBLE_INT32) &&
-	       (alarm_ui_state != MCE_ALARM_UI_RINGING_INT32))))))) {
+	      ((system_state == MCE_STATE_SHUTDOWN) ||
+	       (system_state == MCE_STATE_REBOOT))))) {
 		mce_log(LL_DEBUG,
 			"Ignoring display state change request %d "
-			"due to shutdown/reboot/acting dead",
+			"due to shutdown/reboot",
 			display_state);
 		display_state = cached_display_state;
 	} else if ((use_low_power_mode == FALSE) ||
@@ -4039,15 +4035,6 @@ static void submode_trigger(gconstpointer data)
 	if (((old_submode == MCE_INVALID_SUBMODE) &&
 	     ((submode & MCE_TRANSITION_SUBMODE) == 0)) ||
 	    ((old_submode | submode) & MCE_TRANSITION_SUBMODE)) {
-		/* We've reached acting dead -- blank the screen */
-		if ((system_state == MCE_STATE_ACTDEAD) &&
-		    (alarm_ui_state != MCE_ALARM_UI_RINGING_INT32) &&
-		    (alarm_ui_state != MCE_ALARM_UI_VISIBLE_INT32)) {
-			(void)execute_datapipe(&display_state_pipe,
-					       GINT_TO_POINTER(MCE_DISPLAY_OFF),
-					       USE_INDATA, CACHE_INDATA);
-		}
-
 		update_blanking_inhibit(FALSE);
 	}
 
@@ -4083,13 +4070,10 @@ static void device_inactive_trigger(gconstpointer data)
 	submode_t submode = mce_get_submode_int32();
 
 	/* Unblank screen on device activity,
-	 * unless the device is in acting dead and no alarm is visible
-	 * or if the tklock is active
+	 * unless the tklock is active
 	 */
 	if (((system_state == MCE_STATE_USER) ||
-	     ((system_state == MCE_STATE_ACTDEAD) &&
-	      ((alarm_ui_state == MCE_ALARM_UI_VISIBLE_INT32) ||
-	       (alarm_ui_state == MCE_ALARM_UI_RINGING_INT32)))) &&
+	     (system_state == MCE_STATE_ACTDEAD)) &&
 	    (device_inactive == FALSE) &&
 	    ((submode & MCE_TKLOCK_SUBMODE) == 0)) {
 		/* Adjust the adaptive dimming timeouts,
@@ -4159,19 +4143,10 @@ static void system_state_trigger(gconstpointer data)
 
 	switch (system_state) {
 	case MCE_STATE_USER:
+	case MCE_STATE_ACTDEAD:
 		(void)execute_datapipe(&display_state_pipe,
 				       GINT_TO_POINTER(MCE_DISPLAY_ON),
 				       USE_INDATA, CACHE_INDATA);
-		break;
-
-	case MCE_STATE_ACTDEAD:
-		if ((alarm_ui_state == MCE_ALARM_UI_RINGING_INT32) ||
-		    (alarm_ui_state == MCE_ALARM_UI_VISIBLE_INT32)) {
-			(void)execute_datapipe(&display_state_pipe,
-					       GINT_TO_POINTER(MCE_DISPLAY_ON),
-					       USE_INDATA, CACHE_INDATA);
-		}
-
 		break;
 
 	case MCE_STATE_SHUTDOWN:
