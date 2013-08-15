@@ -40,7 +40,7 @@ the Mode Control Entity and to get mode information.
 %setup -q -n %{name}-%{version}
 
 %build
-./verify_version
+#./verify_version
 make %{?jobs:-j%jobs}
 
 %install
