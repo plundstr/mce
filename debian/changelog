@@ -1,9 +1,3 @@
-mce (1.12.19) unstable; urgency=low
-
-  * [display] enable display on/off handling in actdead
-
- -- Pekka Lundstrom <pekka.lundstrom@jollamobile.com>  Thu, 15 Aug 2013 18:01:08 +0300
-
 mce (1.12.18) unstable; urgency=low
 
   * [mce] Add runtime configuration for disabling led patterns
